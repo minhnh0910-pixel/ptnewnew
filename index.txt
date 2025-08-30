@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Ghép Ảnh Vào Khung</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; cursor: move; }
+    .controls { margin: 10px; }
+    button { margin: 5px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h2>Ghép Ảnh Vào Khung</h2>
+  
+  <div class="controls">
+    <input type="file" id="upload" accept="image/*">
+    <button id="apply">Gắn vào khung</button>
+    <button id="download">Download</button>
+  </div>
+
+  <canvas id="canvas" width="600" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let frame = new Image();
+    frame.src = "frame.png"; // PNG khung (nền đỏ + khoảng trống trong suốt)
+
+    let userImg = null;
+    let uploadedFile = null;
+    let userX = 0, userY = 0, userW = 0, userH = 0;
+    let isDragging = false, offsetX = 0, offsetY = 0;
+
+    // Hàm vẽ lại
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (userImg) {
+        ctx.drawImage(userImg, userX, userY, userW, userH);
+      }
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height); // khung đè lên trên cùng
+    }
+
+    // Upload ảnh
+    document.getElementById("upload").addEventListener("change", (e) => {
+      uploadedFile = e.target.files[0];
+    });
+
+    // Gắn ảnh vào khung
+    document.getElementById("apply").addEventListener("click", () => {
+      if (!uploadedFile) return alert("Hãy chọn ảnh trước!");
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        userImg = new Image();
+        userImg.onload = () => {
+          // Tính scale phù hợp
+          let scale = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
+          userW = userImg.width * scale;
+          userH = userImg.height * scale;
+          userX = (canvas.width - userW) / 2;
+          userY = (canvas.height - userH) / 2;
+          redraw();
+        };
+        userImg.src = ev.target.result;
+      };
+      reader.readAsDataURL(uploadedFile);
+    });
+
+    // Kéo ảnh
+    canvas.addEventListener("mousedown", (e) => {
+      if (!userImg) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (x > userX && x < userX + userW && y > userY && y < userY + userH) {
+        isDragging = true;
+        offsetX = x - userX;
+        offsetY = y - userY;
+      }
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (isDragging) {
+        const rect = canvas.getBoundingClientRect();
+        userX = e.clientX - rect.left - offsetX;
+        userY = e.clientY - rect.top - offsetY;
+        redraw();
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => { isDragging = false; });
+    canvas.addEventListener("mouseleave", () => { isDragging = false; });
+
+    // Download
+    document.getElementById("download").addEventListener("click", () => {
+      redraw(); // vẽ lần cuối đảm bảo đúng vị trí
+      const link = document.createElement("a");
+      link.download = "anh-ghep.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+
+    frame.onload = redraw;
+  </script>
+</body>
+</html>
