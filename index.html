@@ -5,7 +5,7 @@
   <title>Ghép Ảnh Vào Khung</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    canvas { border: 1px solid #ccc; margin-top: 10px; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; display: block; margin-left: auto; margin-right: auto; }
     .controls { margin: 10px; }
     button { margin: 5px; padding: 8px 12px; }
   </style>
@@ -17,6 +17,18 @@
     <input type="file" id="upload" accept="image/*">
     <button id="apply">Gắn vào khung</button>
     <button id="download">Download</button>
+  </div>
+
+  <div class="controls">
+    <button id="up">⬆</button><br>
+    <button id="left">⬅</button>
+    <button id="down">⬇</button>
+    <button id="right">➡</button>
+  </div>
+
+  <div class="controls">
+    <button id="zoomIn">🔍 +</button>
+    <button id="zoomOut">🔍 -</button>
   </div>
 
   <canvas id="canvas"></canvas>
@@ -61,7 +73,6 @@
       reader.onload = (ev) => {
         userImg = new Image();
         userImg.onload = () => {
-          // đặt vị trí giữa canvas
           userX = (canvas.width - userImg.width) / 2;
           userY = (canvas.height - userImg.height) / 2;
           userScale = 1;
@@ -72,19 +83,35 @@
       reader.readAsDataURL(uploadedFile);
     });
 
-    // Điều khiển bằng phím mũi tên
+    // Điều khiển bằng phím mũi tên và + -
     document.addEventListener("keydown", (e) => {
       if (!userImg) return;
+      let moved = false;
       switch (e.key) {
-        case "ArrowUp": userY -= 5; break;
-        case "ArrowDown": userY += 5; break;
-        case "ArrowLeft": userX -= 5; break;
-        case "ArrowRight": userX += 5; break;
-        case "+": userScale *= 1.05; break; // zoom in
-        case "-": userScale /= 1.05; break; // zoom out
+        case "ArrowUp": userY -= 5; moved = true; break;
+        case "ArrowDown": userY += 5; moved = true; break;
+        case "ArrowLeft": userX -= 5; moved = true; break;
+        case "ArrowRight": userX += 5; moved = true; break;
+        case "+": 
+        case "=": 
+        case "Add": userScale *= 1.05; moved = true; break;
+        case "-": 
+        case "_": 
+        case "Subtract": userScale /= 1.05; moved = true; break;
       }
-      redraw();
+      if (moved) {
+        e.preventDefault(); // chặn scroll trang
+        redraw();
+      }
     });
+
+    // Điều khiển bằng nút bấm
+    document.getElementById("up").onclick = () => { userY -= 5; redraw(); };
+    document.getElementById("down").onclick = () => { userY += 5; redraw(); };
+    document.getElementById("left").onclick = () => { userX -= 5; redraw(); };
+    document.getElementById("right").onclick = () => { userX += 5; redraw(); };
+    document.getElementById("zoomIn").onclick = () => { userScale *= 1.1; redraw(); };
+    document.getElementById("zoomOut").onclick = () => { userScale /= 1.1; redraw(); };
 
     // Download
     document.getElementById("download").addEventListener("click", () => {
