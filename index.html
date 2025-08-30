@@ -16,6 +16,8 @@
   <div class="controls">
     <input type="file" id="upload" accept="image/*">
     <button id="apply">Gắn vào khung</button>
+    <button id="zoomIn">+</button>
+    <button id="zoomOut">-</button>
     <button id="download">Download</button>
   </div>
 
@@ -26,40 +28,45 @@
     const ctx = canvas.getContext("2d");
 
     let frame = new Image();
-    frame.src = "frame.png"; // PNG khung (nền đỏ + khoảng trống trong suốt)
+    frame.src = "frame.png"; // PNG có phần nền đỏ + chỗ trống trong suốt
 
     let userImg = null;
-    let uploadedFile = null;
-    let userX = 0, userY = 0, userW = 0, userH = 0;
-    let isDragging = false, offsetX = 0, offsetY = 0;
+    let userX = 0, userY = 0;
+    let scale = 1;
+    let baseWidth = 0, baseHeight = 0;
 
-    // Hàm vẽ lại
+    let isDragging = false;
+    let offsetX, offsetY;
+
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (userImg) {
-        ctx.drawImage(userImg, userX, userY, userW, userH);
+        const drawW = baseWidth * scale;
+        const drawH = baseHeight * scale;
+        ctx.drawImage(userImg, userX, userY, drawW, drawH);
       }
-      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height); // khung đè lên trên cùng
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
     }
 
-    // Upload ảnh
+    // Upload file
+    let uploadedFile = null;
     document.getElementById("upload").addEventListener("change", (e) => {
       uploadedFile = e.target.files[0];
     });
 
-    // Gắn ảnh vào khung
+    // Gắn ảnh
     document.getElementById("apply").addEventListener("click", () => {
       if (!uploadedFile) return alert("Hãy chọn ảnh trước!");
       const reader = new FileReader();
       reader.onload = (ev) => {
         userImg = new Image();
         userImg.onload = () => {
-          // Tính scale phù hợp
-          let scale = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
-          userW = userImg.width * scale;
-          userH = userImg.height * scale;
-          userX = (canvas.width - userW) / 2;
-          userY = (canvas.height - userH) / 2;
+          const ratio = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
+          baseWidth = userImg.width * ratio;
+          baseHeight = userImg.height * ratio;
+          scale = 1;
+          userX = (canvas.width - baseWidth) / 2;
+          userY = (canvas.height - baseHeight) / 2;
           redraw();
         };
         userImg.src = ev.target.result;
@@ -67,13 +74,15 @@
       reader.readAsDataURL(uploadedFile);
     });
 
-    // Kéo ảnh
+    // Kéo thả ảnh
     canvas.addEventListener("mousedown", (e) => {
       if (!userImg) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      if (x > userX && x < userX + userW && y > userY && y < userY + userH) {
+      const drawW = baseWidth * scale;
+      const drawH = baseHeight * scale;
+      if (x > userX && x < userX + drawW && y > userY && y < userY + drawH) {
         isDragging = true;
         offsetX = x - userX;
         offsetY = y - userY;
@@ -92,9 +101,33 @@
     canvas.addEventListener("mouseup", () => { isDragging = false; });
     canvas.addEventListener("mouseleave", () => { isDragging = false; });
 
+    // Zoom bằng nút
+    document.getElementById("zoomIn").addEventListener("click", () => {
+      if (!userImg) return;
+      scale *= 1.1;
+      redraw();
+    });
+
+    document.getElementById("zoomOut").addEventListener("click", () => {
+      if (!userImg) return;
+      scale /= 1.1;
+      redraw();
+    });
+
+    // Zoom bằng con lăn chuột
+    canvas.addEventListener("wheel", (e) => {
+      if (!userImg) return;
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        scale *= 1.1; // zoom in
+      } else {
+        scale /= 1.1; // zoom out
+      }
+      redraw();
+    });
+
     // Download
     document.getElementById("download").addEventListener("click", () => {
-      redraw(); // vẽ lần cuối đảm bảo đúng vị trí
       const link = document.createElement("a");
       link.download = "anh-ghep.png";
       link.href = canvas.toDataURL("image/png");
