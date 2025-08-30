@@ -5,7 +5,7 @@
   <title>Ghép Ảnh Vào Khung</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
-    canvas { border: 1px solid #ccc; margin-top: 10px; cursor: move; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; }
     .controls { margin: 10px; }
     button { margin: 5px; padding: 8px 12px; }
   </style>
@@ -16,8 +16,16 @@
   <div class="controls">
     <input type="file" id="upload" accept="image/*">
     <button id="apply">Gắn vào khung</button>
+    <br><br>
+    <button id="up">⬆️</button><br>
+    <button id="left">⬅️</button>
+    <button id="right">➡️</button><br>
+    <button id="down">⬇️</button>
+    <br><br>
     <button id="zoomIn">+</button>
     <button id="zoomOut">-</button>
+    <button id="reset">Reset</button>
+    <br><br>
     <button id="download">Download</button>
   </div>
 
@@ -28,15 +36,12 @@
     const ctx = canvas.getContext("2d");
 
     let frame = new Image();
-    frame.src = "frame.png"; // PNG có phần nền đỏ + chỗ trống trong suốt
+    frame.src = "frame.png"; // PNG có nền đỏ + lỗ trống trong suốt
 
     let userImg = null;
     let userX = 0, userY = 0;
     let scale = 1;
     let baseWidth = 0, baseHeight = 0;
-
-    let isDragging = false;
-    let offsetX, offsetY;
 
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -74,65 +79,34 @@
       reader.readAsDataURL(uploadedFile);
     });
 
-    // Kéo thả ảnh
-    canvas.addEventListener("mousedown", (e) => {
+    // Di chuyển bằng nút mũi tên
+    document.getElementById("up").onclick = () => { userY -= 10; redraw(); };
+    document.getElementById("down").onclick = () => { userY += 10; redraw(); };
+    document.getElementById("left").onclick = () => { userX -= 10; redraw(); };
+    document.getElementById("right").onclick = () => { userX += 10; redraw(); };
+
+    // Zoom
+    document.getElementById("zoomIn").onclick = () => { scale *= 1.1; redraw(); };
+    document.getElementById("zoomOut").onclick = () => { scale /= 1.1; redraw(); };
+
+    // Reset
+    document.getElementById("reset").onclick = () => {
       if (!userImg) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const drawW = baseWidth * scale;
-      const drawH = baseHeight * scale;
-      if (x > userX && x < userX + drawW && y > userY && y < userY + drawH) {
-        isDragging = true;
-        offsetX = x - userX;
-        offsetY = y - userY;
-      }
-    });
-
-    canvas.addEventListener("mousemove", (e) => {
-      if (isDragging) {
-        const rect = canvas.getBoundingClientRect();
-        userX = e.clientX - rect.left - offsetX;
-        userY = e.clientY - rect.top - offsetY;
-        redraw();
-      }
-    });
-
-    canvas.addEventListener("mouseup", () => { isDragging = false; });
-    canvas.addEventListener("mouseleave", () => { isDragging = false; });
-
-    // Zoom bằng nút
-    document.getElementById("zoomIn").addEventListener("click", () => {
-      if (!userImg) return;
-      scale *= 1.1;
+      scale = 1;
+      userX = (canvas.width - baseWidth) / 2;
+      userY = (canvas.height - baseHeight) / 2;
       redraw();
-    });
+    };
 
-    document.getElementById("zoomOut").addEventListener("click", () => {
-      if (!userImg) return;
-      scale /= 1.1;
-      redraw();
-    });
-
-    // Zoom bằng con lăn chuột
-    canvas.addEventListener("wheel", (e) => {
-      if (!userImg) return;
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        scale *= 1.1; // zoom in
-      } else {
-        scale /= 1.1; // zoom out
-      }
-      redraw();
-    });
-
-    // Download
-    document.getElementById("download").addEventListener("click", () => {
+    // Download ảnh
+    document.getElementById("download").onclick = () => {
       const link = document.createElement("a");
-      link.download = "anh-ghep.png";
       link.href = canvas.toDataURL("image/png");
+      link.download = "anh-ghep.png";
+      document.body.appendChild(link);
       link.click();
-    });
+      document.body.removeChild(link);
+    };
 
     frame.onload = redraw;
   </script>
