@@ -16,62 +16,55 @@
   <div class="controls">
     <input type="file" id="upload" accept="image/*">
     <button id="apply">Gắn vào khung</button>
-    <br><br>
-    <button id="up">⬆️</button><br>
-    <button id="left">⬅️</button>
-    <button id="right">➡️</button><br>
-    <button id="down">⬇️</button>
-    <br><br>
-    <button id="zoomIn">+</button>
-    <button id="zoomOut">-</button>
-    <button id="reset">Reset</button>
-    <br><br>
     <button id="download">Download</button>
   </div>
 
-  <canvas id="canvas" width="600" height="600"></canvas>
+  <canvas id="canvas"></canvas>
 
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
     let frame = new Image();
-    frame.src = "frame.png"; // PNG có nền đỏ + lỗ trống trong suốt
+    frame.src = "frame.png"; // file PNG khung (nền đỏ + lỗ trống trong suốt)
 
     let userImg = null;
     let userX = 0, userY = 0;
-    let scale = 1;
-    let baseWidth = 0, baseHeight = 0;
+    let userScale = 1;
 
+    // Khi khung load xong thì set kích thước canvas = khung
+    frame.onload = () => {
+      canvas.width = frame.width;
+      canvas.height = frame.height;
+      redraw();
+    };
+
+    // Vẽ lại canvas
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       if (userImg) {
-        const drawW = baseWidth * scale;
-        const drawH = baseHeight * scale;
-        ctx.drawImage(userImg, userX, userY, drawW, drawH);
+        ctx.drawImage(userImg, userX, userY, userImg.width * userScale, userImg.height * userScale);
       }
-      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height); // khung luôn trên cùng
     }
 
-    // Upload file
+    // Upload ảnh
     let uploadedFile = null;
     document.getElementById("upload").addEventListener("change", (e) => {
       uploadedFile = e.target.files[0];
     });
 
-    // Gắn ảnh
+    // Nút "Gắn vào khung"
     document.getElementById("apply").addEventListener("click", () => {
       if (!uploadedFile) return alert("Hãy chọn ảnh trước!");
       const reader = new FileReader();
       reader.onload = (ev) => {
         userImg = new Image();
         userImg.onload = () => {
-          const ratio = Math.min(canvas.width / userImg.width, canvas.height / userImg.height);
-          baseWidth = userImg.width * ratio;
-          baseHeight = userImg.height * ratio;
-          scale = 1;
-          userX = (canvas.width - baseWidth) / 2;
-          userY = (canvas.height - baseHeight) / 2;
+          // đặt vị trí giữa canvas
+          userX = (canvas.width - userImg.width) / 2;
+          userY = (canvas.height - userImg.height) / 2;
+          userScale = 1;
           redraw();
         };
         userImg.src = ev.target.result;
@@ -79,36 +72,27 @@
       reader.readAsDataURL(uploadedFile);
     });
 
-    // Di chuyển bằng nút mũi tên
-    document.getElementById("up").onclick = () => { userY -= 10; redraw(); };
-    document.getElementById("down").onclick = () => { userY += 10; redraw(); };
-    document.getElementById("left").onclick = () => { userX -= 10; redraw(); };
-    document.getElementById("right").onclick = () => { userX += 10; redraw(); };
-
-    // Zoom
-    document.getElementById("zoomIn").onclick = () => { scale *= 1.1; redraw(); };
-    document.getElementById("zoomOut").onclick = () => { scale /= 1.1; redraw(); };
-
-    // Reset
-    document.getElementById("reset").onclick = () => {
+    // Điều khiển bằng phím mũi tên
+    document.addEventListener("keydown", (e) => {
       if (!userImg) return;
-      scale = 1;
-      userX = (canvas.width - baseWidth) / 2;
-      userY = (canvas.height - baseHeight) / 2;
+      switch (e.key) {
+        case "ArrowUp": userY -= 5; break;
+        case "ArrowDown": userY += 5; break;
+        case "ArrowLeft": userX -= 5; break;
+        case "ArrowRight": userX += 5; break;
+        case "+": userScale *= 1.05; break; // zoom in
+        case "-": userScale /= 1.05; break; // zoom out
+      }
       redraw();
-    };
+    });
 
-    // Download ảnh
-    document.getElementById("download").onclick = () => {
+    // Download
+    document.getElementById("download").addEventListener("click", () => {
       const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
       link.download = "anh-ghep.png";
-      document.body.appendChild(link);
+      link.href = canvas.toDataURL("image/png");
       link.click();
-      document.body.removeChild(link);
-    };
-
-    frame.onload = redraw;
+    });
   </script>
 </body>
 </html>
